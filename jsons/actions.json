@@ -1,0 +1,28 @@
+{
+  "user_id": "",
+  "subscribe_topics": [
+    "one",
+    "two",
+    "three"
+  ],
+  "unsubscribe_topics": [
+    "one",
+    "two",
+    "three"
+  ],
+  "actions": [
+    {
+      "action": "SEND",
+      "topic": "one",
+      "messages": [
+        "the world is trying to fuck with me!!!!",
+        "Hello World"
+      ]
+    },
+    {
+      "action": "GET",
+      "topic": "one",
+      "number": 2
+    }
+  ]
+}
