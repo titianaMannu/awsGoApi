@@ -84,6 +84,7 @@ func getAMessage(URL *string, visibilityTO *int64) {
 		return
 	}
 	if len(msgResult.Messages) == 0 {
+		fmt.Println("no messages available")
 		return
 	}
 	fmt.Println("Message ID:     " + *msgResult.Messages[0].MessageId)

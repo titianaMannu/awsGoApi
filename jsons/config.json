@@ -5,14 +5,16 @@
     "two",
     "three"
   ],
+  "unsubscribe_topics": [
+    "one",
+    "two",
+    "three"
+  ],
   "actions": [
     {
-      "action": "SEND",
+      "action": "GET",
       "topic": "one",
-      "messages": [
-        "the world is trying to fuck with me!!!!",
-        "Hello World"
-      ]
+      "number": 2
     }
   ]
 }
