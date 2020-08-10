@@ -1,7 +1,9 @@
 package utilities
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 )
 
@@ -44,4 +46,30 @@ func ExternalIP() (string, error) {
 		}
 	}
 	return "", errors.New("are you connected to the network?")
+}
+
+type UserInfo struct {
+	ID     string
+	Topics []string
+}
+
+func MapToJson(userIdMap map[string][]string) (outStr *string) {
+	var myList []UserInfo
+	for key, elem := range userIdMap {
+		info := UserInfo{
+			ID:     key,
+			Topics: elem,
+		}
+
+		myList = append(myList, info)
+	}
+
+	b, err := json.Marshal(myList)
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+
+	str := string(b)
+	fmt.Println(str)
+	return &str
 }

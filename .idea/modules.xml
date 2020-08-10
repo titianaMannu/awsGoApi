@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/awsGoApiTest.iml" filepath="$PROJECT_DIR$/.idea/awsGoApiTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../SDCC-A3-Project/.idea/awsGoApi.iml" filepath="$PROJECT_DIR$/../SDCC-A3-Project/.idea/awsGoApi.iml" />
     </modules>
   </component>
 </project>

@@ -1,9 +1,11 @@
 package rpcFunctions
 
 import (
-	"AwsGoApiTest/imports/shortuuid-master"
-	"AwsGoApiTest/queueManagement"
-	"AwsGoApiTest/utilities"
+	"SDCC-A3-Project/imports/shortuuid-master"
+	"SDCC-A3-Project/snsManagement"
+
+	"SDCC-A3-Project/sqsManagement"
+	"SDCC-A3-Project/utilities"
 	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -14,7 +16,9 @@ type Service struct {
 	UsersIdMap          map[string][]string // topicString:List of users
 	QueueSubscribersMap map[string]int
 	URLQueueMap         map[string]string // topic:URL of the queue
-	rwMtx               sync.RWMutex      // to guarantee access in mutual exclusion to the maps
+	RwMtx               sync.RWMutex      // to guarantee access in mutual exclusion to the maps
+	TopicARN            string
+	QueueURL            string
 }
 
 type RPCServer interface {
@@ -25,14 +29,14 @@ type RPCServer interface {
 }
 
 func (s *Service) GetQueueURL(inArg *utilities.RequestArg, outURL *string) error {
-	s.rwMtx.RLock()
+	s.RwMtx.RLock()
 	/*start critical read section*/
 	var l []string
 	// check if the user is valid or not
 	if val, exists := s.UsersIdMap[inArg.ID]; exists {
 		l = val
 	} else {
-		s.rwMtx.RUnlock()
+		s.RwMtx.RUnlock()
 		return errors.New("invalid user id\n")
 	}
 
@@ -47,23 +51,23 @@ func (s *Service) GetQueueURL(inArg *utilities.RequestArg, outURL *string) error
 	if isSubscriber {
 		*outURL = s.URLQueueMap[inArg.Tag]
 	} else {
-		s.rwMtx.RUnlock()
+		s.RwMtx.RUnlock()
 		return errors.New("a subscription must be done before")
 	}
 
-	s.rwMtx.RUnlock()
+	s.RwMtx.RUnlock()
 	return nil
 }
 
 func (s *Service) DeleteSubscription(inArg *utilities.RequestArg, exitStatus *int) error {
-	s.rwMtx.Lock()
+	s.RwMtx.Lock()
 	/*critical section, nobody can read while i'm writing*/
 	var l []string
 	// check if the user is valid or not
 	if val, exists := s.UsersIdMap[inArg.ID]; exists {
 		l = val
 	} else {
-		s.rwMtx.Unlock()
+		s.RwMtx.Unlock()
 		return errors.New("invalid user id\n")
 	}
 
@@ -87,12 +91,15 @@ func (s *Service) DeleteSubscription(inArg *utilities.RequestArg, exitStatus *in
 		delete(s.URLQueueMap, inArg.Tag)
 	}
 	*exitStatus = 0
-	s.rwMtx.Unlock()
+	s.RwMtx.Unlock()
+	//TODO DO THIS IN ASYNC TASK
+	//need to send my list updated to other servers
+	snsManagement.PublishUserListUpdate(s.UsersIdMap, &s.TopicARN)
 	return nil
 }
 
 func (s *Service) MakeSubscriptionToTopic(inArg *utilities.RequestArg, outArg *utilities.SubscriptionOutput) error {
-	s.rwMtx.Lock()
+	s.RwMtx.Lock()
 	/*critical section, nobody can read while i'm writing*/
 
 	var l []string
@@ -100,13 +107,13 @@ func (s *Service) MakeSubscriptionToTopic(inArg *utilities.RequestArg, outArg *u
 	if val, exists := s.UsersIdMap[inArg.ID]; exists {
 		l = val
 	} else {
-		s.rwMtx.Unlock()
+		s.RwMtx.Unlock()
 		return errors.New("invalid user id\n")
 	}
 
 	for i := 0; i < len(l); i++ {
 		if l[i] == inArg.Tag {
-			s.rwMtx.Unlock()
+			s.RwMtx.Unlock()
 			// the subscription already exists
 			return errors.New("subscription already exists\n")
 		}
@@ -126,12 +133,15 @@ func (s *Service) MakeSubscriptionToTopic(inArg *utilities.RequestArg, outArg *u
 		// this is a new queue with only a subscriber
 		s.QueueSubscribersMap[inArg.Tag] = 1
 	}
-	s.rwMtx.Unlock()
+	s.RwMtx.Unlock()
+	//TODO DO THIS IN ASYNC TASK
+	//need to send my list updated to other servers
+	snsManagement.PublishUserListUpdate(s.UsersIdMap, &s.TopicARN)
 	return nil
 }
 
 func (s *Service) GenerateUserId(inArgs *utilities.RequestArg, outId *string) error {
-	s.rwMtx.Lock()
+	s.RwMtx.Lock()
 	/*critical section, nobody can read while i'm writing*/
 
 	var ID string
@@ -148,19 +158,20 @@ func (s *Service) GenerateUserId(inArgs *utilities.RequestArg, outId *string) er
 	var l []string
 	s.UsersIdMap[ID] = l
 	*outId = ID
-
-	s.rwMtx.Unlock()
+	s.RwMtx.Unlock()
+	//TODO DO THIS IN ASYNC TASK
+	//need to send my list updated to other servers
+	snsManagement.PublishUserListUpdate(s.UsersIdMap, &s.TopicARN)
 	return nil
 }
 
 func (s *Service) initQueue(tag string) string {
 	// Create a session that gets credential values from ~/.aws/credentials
 	// and the default region from ~/.aws/config
-	// snippet-start:[sqs.go.create_queue.sess]
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
-	result, err := queueManagement.CreateQueue(sess, &tag)
+	result, err := sqsManagement.CreateQueue(sess, &tag)
 	if err != nil {
 		fmt.Println("Got an error creating the queue:")
 		fmt.Println(err)
@@ -176,7 +187,7 @@ func deleteQueue(url *string) {
 		SharedConfigState: session.SharedConfigEnable,
 	}))
 
-	err := queueManagement.DeleteQueue(sess, url)
+	err := sqsManagement.DeleteQueue(sess, url)
 	if err != nil {
 		fmt.Println("You'll have to delete queue " + " yourself")
 		fmt.Println(err)

@@ -1,4 +1,4 @@
-package queueManagement
+package sqsManagement
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
@@ -15,7 +15,6 @@ import (
 //     Otherwise, an empty string and an error from the call to CreateQueue
 func CreateQueue(sess *session.Session, queue *string) (*sqs.CreateQueueOutput, error) {
 	// Create an SQS service client
-	// snippet-start:[sqs.go.create_queue.call]
 	svc := sqs.New(sess)
 
 	result, err := svc.CreateQueue(&sqs.CreateQueueInput{
@@ -25,7 +24,6 @@ func CreateQueue(sess *session.Session, queue *string) (*sqs.CreateQueueOutput, 
 			"MessageRetentionPeriod": aws.String("86400"),
 		},
 	})
-	// snippet-end:[sqs.go.create_queue.call]
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +54,6 @@ func DeleteQueue(sess *session.Session, queueURL *string) error {
 //     Otherwise, an error from the call to SendMessage
 func SendMsg(sess *session.Session, queueURL *string, message *string, author *string) error {
 	// Create an SQS service client
-	// snippet-start:[sqs.go.send_message.call]
 	svc := sqs.New(sess)
 
 	_, err := svc.SendMessage(&sqs.SendMessageInput{
@@ -70,7 +67,6 @@ func SendMsg(sess *session.Session, queueURL *string, message *string, author *s
 		MessageBody: aws.String(*message),
 		QueueUrl:    queueURL,
 	})
-	// snippet-end:[sqs.go.send_message.call]
 	if err != nil {
 		return err
 	}
@@ -90,7 +86,6 @@ func GetMessages(sess *session.Session, queueURL *string, timeout *int64) (*sqs.
 	// Create an SQS service client
 	svc := sqs.New(sess)
 
-	// snippet-start:[sqs.go.receive_messages.call]
 	msgResult, err := svc.ReceiveMessage(&sqs.ReceiveMessageInput{
 		AttributeNames: []*string{
 			aws.String(sqs.MessageSystemAttributeNameSentTimestamp),
@@ -102,10 +97,31 @@ func GetMessages(sess *session.Session, queueURL *string, timeout *int64) (*sqs.
 		MaxNumberOfMessages: aws.Int64(1),
 		VisibilityTimeout:   timeout,
 	})
-	// snippet-end:[sqs.go.receive_messages.call]
+
 	if err != nil {
 		return nil, err
 	}
 
 	return msgResult, nil
+}
+
+// DeleteMessage deletes a message from an Amazon SQS queue
+// Inputs:
+//     sess is the current session, which provides configuration for the SDK's service clients
+//     queueURL is the URL of the queue
+//     messageID is the ID of the message
+// Output:
+//     If success, nil
+//     Otherwise, an error from the call to DeleteMessage
+func DeleteMessage(sess *session.Session, queueURL *string, messageHandle *string) error {
+	svc := sqs.New(sess)
+
+	_, err := svc.DeleteMessage(&sqs.DeleteMessageInput{
+		QueueUrl:      queueURL,
+		ReceiptHandle: messageHandle,
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }

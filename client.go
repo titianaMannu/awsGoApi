@@ -1,8 +1,8 @@
 package main
 
 import (
-	"AwsGoApiTest/queueManagement"
-	"AwsGoApiTest/utilities"
+	"SDCC-A3-Project/sqsManagement"
+	"SDCC-A3-Project/utilities"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/rpc"
 	"os"
+	"time"
 )
 
 type Arguments struct {
@@ -62,7 +63,7 @@ func sendAMessage(URL *string, message *string, userId *string) {
 		SharedConfigState: session.SharedConfigEnable,
 	}))
 
-	err := queueManagement.SendMsg(sess, URL, message, userId)
+	err := sqsManagement.SendMsg(sess, URL, message, userId)
 	if err != nil {
 		fmt.Println("Got an error sending the message:")
 		fmt.Println(err)
@@ -72,21 +73,30 @@ func sendAMessage(URL *string, message *string, userId *string) {
 	fmt.Println("Sent message to queue ")
 }
 
-func getAMessage(URL *string, visibilityTO *int64) {
+func getAMessage(URL *string, visibilityTO *int64) bool {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
 
-	msgResult, err := queueManagement.GetMessages(sess, URL, visibilityTO)
+	msgResult, err := sqsManagement.GetMessages(sess, URL, visibilityTO)
 	if err != nil {
 		fmt.Println("Got an error receiving messages:")
 		fmt.Println(err)
-		return
+		return false
 	}
 	if len(msgResult.Messages) == 0 {
 		fmt.Println("no messages available")
-		return
+		return false
 	}
+
+	//otherwise the message return visible after the visibility timeout
+	err = sqsManagement.DeleteMessage(sess, URL, msgResult.Messages[0].ReceiptHandle)
+	if err != nil {
+		fmt.Println("Got an error deleting the message:")
+		fmt.Println(err)
+		return false
+	}
+
 	fmt.Println("Message ID:     " + *msgResult.Messages[0].MessageId)
 	fmt.Println("Message Handle: " + *msgResult.Messages[0].ReceiptHandle)
 	fmt.Println("Message Attributes: ")
@@ -96,6 +106,8 @@ func getAMessage(URL *string, visibilityTO *int64) {
 	}
 
 	fmt.Println("Message Body: " + *msgResult.Messages[0].Body)
+
+	return true
 }
 
 func deleteSubscriptions(client *rpc.Client, args Arguments) {
@@ -133,10 +145,15 @@ func doActions(client *rpc.Client, args Arguments) {
 				sendAMessage(&url, &current.Message[j], &args.ID)
 			}
 		} else if current.Action == "GET" {
-			for j := 0; j < current.Number; j++ {
+			attempts := 10
+			for current.Number != 0 && attempts != 0 {
 				var to int64
-				to = 5
-				getAMessage(&url, &to)
+				to = 20
+				if getAMessage(&url, &to) {
+					current.Number--
+				}
+				attempts--
+				time.Sleep(time.Second * 10)
 			}
 		}
 	}

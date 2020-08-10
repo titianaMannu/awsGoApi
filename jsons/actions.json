@@ -1,10 +1,5 @@
 {
-  "user_id": "",
-  "subscribe_topics": [
-    "one",
-    "two",
-    "three"
-  ],
+  "user_id": "bnx69AbBXm7azZa6CAb7j9",
   "actions": [
     {
       "action": "SEND",
