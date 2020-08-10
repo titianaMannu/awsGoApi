@@ -50,6 +50,19 @@ func (s *Service) GetQueueURL(inArg *utilities.RequestArg, outURL *string) error
 	}
 	if isSubscriber {
 		*outURL = s.URLQueueMap[inArg.Tag]
+		if *outURL == "" {
+			// we haven't a valid reference to the queue
+			result, err := sqsManagement.GetQueueURL(&inArg.Tag)
+			if err != nil {
+				fmt.Println("Got an error getting the queue URL:")
+				fmt.Println(err)
+			}
+			if *result.QueueUrl == "" {
+				//queue must be created
+				*outURL = s.initQueue(inArg.Tag)
+			}
+		}
+
 	} else {
 		s.RwMtx.RUnlock()
 		return errors.New("a subscription must be done before")
@@ -83,7 +96,6 @@ func (s *Service) DeleteSubscription(inArg *utilities.RequestArg, exitStatus *in
 
 	if s.QueueSubscribersMap[inArg.Tag] == 0 {
 		//no more producers,  no more subscribers are still interested and so we can cancel this queue
-
 		delete(s.QueueSubscribersMap, inArg.Tag)
 		url := s.URLQueueMap[inArg.Tag]
 		//deleting sqs-queue

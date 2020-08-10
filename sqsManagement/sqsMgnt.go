@@ -125,3 +125,19 @@ func DeleteMessage(sess *session.Session, queueURL *string, messageHandle *strin
 	}
 	return nil
 }
+
+func GetQueueURL(queue *string) (*sqs.GetQueueUrlOutput, error) {
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+	}))
+	// Create an SQS service client
+	svc := sqs.New(sess)
+
+	result, err := svc.GetQueueUrl(&sqs.GetQueueUrlInput{
+		QueueName: queue,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}

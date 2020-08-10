@@ -68,7 +68,6 @@ func LookForMessages(s *rpcFunctions.Service) {
 	var to int64
 	to = 20
 	for {
-
 		msgResult, err := sqsManagement.GetMessages(sess, &s.QueueURL, &to)
 		if err != nil {
 			fmt.Println("Got an error receiving messages:")
