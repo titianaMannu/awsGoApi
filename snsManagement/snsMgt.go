@@ -55,7 +55,7 @@ func findMAsterTopic() (topicARN *string) {
 	return resTopicARN
 }
 
-func SnsToSqsConfig(outQueueURL, outTopicARN *string) {
+func SnsToSqsConfig(outQueueURL, outTopicARN *string, zone string) {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
@@ -63,8 +63,8 @@ func SnsToSqsConfig(outQueueURL, outTopicARN *string) {
 	sqsSvc := sqs.New(sess)
 	snsSvc := sns.New(sess)
 
-	topicName := "MASTER"
-	queueRes, err := sqsManagement.CreateQueue(sess, &topicName)
+	topicName := "MASTER_" + zone
+	queueRes, err := sqsManagement.CreateQueue(sess, &topicName) // listening sns queue
 	if err != nil {
 		log.Fatal("Got an error creating the queue:", err)
 	}

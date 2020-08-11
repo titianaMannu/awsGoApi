@@ -151,6 +151,7 @@ func doActions(client *rpc.Client, args Arguments) {
 				to = 20
 				if getAMessage(&url, &to) {
 					current.Number--
+					continue
 				}
 				attempts--
 				time.Sleep(time.Second * 10)

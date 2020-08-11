@@ -1,5 +1,14 @@
 {
-  "user_id": "2BK5WRBEeWy7AtLhxSA38U",
+  "user_id": "",
+  "subscribe_topics": [
+    "one",
+    "two",
+    "three"
+  ],
+  "unsubscribe_topics": [
+    "two",
+    "three"
+  ],
   "actions": [
     {
       "action": "SEND",

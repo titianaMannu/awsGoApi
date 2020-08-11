@@ -2,6 +2,7 @@ package utilities
 
 const (
 	ServerPort = 1234
+	Zone       = "Rome"
 )
 
 type RequestArg struct {

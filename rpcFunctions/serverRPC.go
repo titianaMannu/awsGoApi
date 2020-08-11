@@ -13,12 +13,13 @@ import (
 )
 
 type Service struct {
-	UsersIdMap          map[string][]string // topicString:List of users
-	QueueSubscribersMap map[string]int
-	URLQueueMap         map[string]string // topic:URL of the queue
-	RwMtx               sync.RWMutex      // to guarantee access in mutual exclusion to the maps
-	TopicARN            string
-	QueueURL            string
+	UsersIdMap          map[string][]string // topicString:List of topic
+	QueueSubscribersMap map[string]int      // topic : number of subscribers
+	URLQueueMap         map[string]string   // topic:URL of the queue
+	RwMtx               sync.RWMutex        // to guarantee access in mutual exclusion to the maps
+	Zone                string
+	TopicARN            string // sns arn notification endpoint
+	QueueURL            string // sns queue reception
 }
 
 type RPCServer interface {
@@ -51,8 +52,10 @@ func (s *Service) GetQueueURL(inArg *utilities.RequestArg, outURL *string) error
 	if isSubscriber {
 		*outURL = s.URLQueueMap[inArg.Tag]
 		if *outURL == "" {
+			var queueName string
+			queueName = inArg.Tag + "_" + s.Zone
 			// we haven't a valid reference to the queue
-			result, err := sqsManagement.GetQueueURL(&inArg.Tag)
+			result, err := sqsManagement.GetQueueURL(&queueName)
 			if err != nil {
 				fmt.Println("Got an error getting the queue URL:")
 				fmt.Println(err)
@@ -60,6 +63,9 @@ func (s *Service) GetQueueURL(inArg *utilities.RequestArg, outURL *string) error
 			if *result.QueueUrl == "" {
 				//queue must be created
 				*outURL = s.initQueue(inArg.Tag)
+			} else {
+				s.URLQueueMap[inArg.Tag] = *result.QueueUrl
+				*outURL = *result.QueueUrl
 			}
 		}
 
@@ -104,9 +110,7 @@ func (s *Service) DeleteSubscription(inArg *utilities.RequestArg, exitStatus *in
 	}
 	*exitStatus = 0
 	s.RwMtx.Unlock()
-	//TODO DO THIS IN ASYNC TASK
-	//need to send my list updated to other servers
-	snsManagement.PublishUserListUpdate(s.UsersIdMap, &s.TopicARN)
+	go func() { snsManagement.PublishUserListUpdate(s.UsersIdMap, &s.TopicARN) }()
 	return nil
 }
 
@@ -140,15 +144,14 @@ func (s *Service) MakeSubscriptionToTopic(inArg *utilities.RequestArg, outArg *u
 	} else {
 		//the queue doesn't exists
 		//follows dynamic creation of the queue
-		s.URLQueueMap[inArg.Tag] = s.initQueue(inArg.Tag)
+		s.URLQueueMap[inArg.Tag] = s.initQueue(inArg.Tag + "_" + s.Zone)
 		outArg.QueueURL = s.URLQueueMap[inArg.Tag]
 		// this is a new queue with only a subscriber
 		s.QueueSubscribersMap[inArg.Tag] = 1
 	}
 	s.RwMtx.Unlock()
-	//TODO DO THIS IN ASYNC TASK
 	//need to send my list updated to other servers
-	snsManagement.PublishUserListUpdate(s.UsersIdMap, &s.TopicARN)
+	go func() { snsManagement.PublishUserListUpdate(s.UsersIdMap, &s.TopicARN) }()
 	return nil
 }
 
@@ -171,9 +174,8 @@ func (s *Service) GenerateUserId(inArgs *utilities.RequestArg, outId *string) er
 	s.UsersIdMap[ID] = l
 	*outId = ID
 	s.RwMtx.Unlock()
-	//TODO DO THIS IN ASYNC TASK
 	//need to send my list updated to other servers
-	snsManagement.PublishUserListUpdate(s.UsersIdMap, &s.TopicARN)
+	go func() { snsManagement.PublishUserListUpdate(s.UsersIdMap, &s.TopicARN) }()
 	return nil
 }
 

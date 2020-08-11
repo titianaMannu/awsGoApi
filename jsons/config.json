@@ -1,14 +1,5 @@
 {
-  "user_id": "",
-  "subscribe_topics": [
-    "one",
-    "two",
-    "three"
-  ],
-  "unsubscribe_topics": [
-    "two",
-    "three"
-  ],
+  "user_id": "PM9ZkZi9wGRj7whjHbZ4DH",
   "actions": [
     {
       "action": "GET",

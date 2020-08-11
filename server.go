@@ -18,20 +18,22 @@ import (
 func main() {
 	// Program Parameters
 	serverPort := flag.Int("serverPort", utilities.ServerPort, "a port number")
+	serverZone := flag.String("zone", utilities.Zone, "server zone")
 	flag.Parse()
 
-	initServer(serverPort)
+	initServer(serverPort, serverZone)
 
 }
 
-func initServer(serverPort *int) {
+func initServer(serverPort *int, serverZone *string) {
 
 	// Queue Initialization
 	s := new(rpcFunctions.Service)
 	s.URLQueueMap = make(map[string]string)
 	s.UsersIdMap = make(map[string][]string)
 	s.QueueSubscribersMap = make(map[string]int)
-	snsManagement.SnsToSqsConfig(&s.QueueURL, &s.TopicARN)
+	s.Zone = *serverZone
+	snsManagement.SnsToSqsConfig(&s.QueueURL, &s.TopicARN, s.Zone)
 
 	go func() { LookForMessages(s) }()
 
@@ -66,7 +68,7 @@ func LookForMessages(s *rpcFunctions.Service) {
 		SharedConfigState: session.SharedConfigEnable,
 	}))
 	var to int64
-	to = 20
+	to = 20 //visibility timeout
 	for {
 		msgResult, err := sqsManagement.GetMessages(sess, &s.QueueURL, &to)
 		if err != nil {
