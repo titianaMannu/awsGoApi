@@ -3,6 +3,7 @@ package utilities
 const (
 	ServerPort = 1234
 	Zone       = "Rome"
+	Attempts   = 10
 )
 
 type RequestArg struct {

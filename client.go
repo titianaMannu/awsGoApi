@@ -145,12 +145,13 @@ func doActions(client *rpc.Client, args Arguments) {
 				sendAMessage(&url, &current.Message[j], &args.ID)
 			}
 		} else if current.Action == "GET" {
-			attempts := 10
+			attempts := utilities.Attempts
 			for current.Number != 0 && attempts != 0 {
 				var to int64
 				to = 20
 				if getAMessage(&url, &to) {
 					current.Number--
+					attempts = utilities.Attempts
 					continue
 				}
 				attempts--
