@@ -148,7 +148,7 @@ func doActions(client *rpc.Client, args Arguments) {
 			attempts := utilities.Attempts
 			for current.Number != 0 && attempts != 0 {
 				var to int64
-				to = 20
+				to = utilities.VisibilityTimeOut
 				if getAMessage(&url, &to) {
 					current.Number--
 					attempts = utilities.Attempts

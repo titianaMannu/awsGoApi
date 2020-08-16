@@ -1,9 +1,10 @@
 package utilities
 
 const (
-	ServerPort = 1234
-	Zone       = "Rome"
-	Attempts   = 10
+	ServerPort        = 1234
+	Zone              = "Rome"
+	Attempts          = 10
+	VisibilityTimeOut = 20
 )
 
 type RequestArg struct {
